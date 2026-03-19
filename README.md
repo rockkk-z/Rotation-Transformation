@@ -139,12 +139,18 @@ python main.py
 
 ---
 
-## 效果展示（建议添加）
+## 效果展示
 
-在此处放 GIF：
+三角形：
 
 ```markdown
-![demo](assets/demo.gif)
+![demo](assets/demo_triangle.gif)
+```
+
+正方体：
+
+```markdown
+![demo](assets/demo_cube.gif)
 ```
 
 ---
