@@ -143,15 +143,11 @@ python main.py
 
 三角形：
 
-```markdown
-![demo](assets/demo_triangle.gif)
-```
+![demo](assets/demoTriangle.gif)
 
 正方体：
 
-```markdown
-![demo](assets/demo_cube.gif)
-```
+![demo](assets/demoCube.gif)
 
 ---
 
