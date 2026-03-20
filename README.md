@@ -36,8 +36,6 @@
 
 $$ v_{clip} = M_{proj} \cdot M_{view} \cdot M_{model} \cdot v $$
 
-$$ v_{ndc} = \frac{v_{clip}}{w} $$
-
 然后进行：
 
 - **透视除法（Perspective Divide）**
