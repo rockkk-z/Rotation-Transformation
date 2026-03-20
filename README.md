@@ -40,7 +40,7 @@ $$ v_{clip} = M_{proj} \cdot M_{view} \cdot M_{model} \cdot v $$
 
 - **透视除法（Perspective Divide）**
   
-$$ v_{ndc} = \frac{v_{clip}}{w} $$
+$ v_{ndc} = \frac{v_{clip}}{w} $
 
 - **视口变换（Viewport Transform）**
   
