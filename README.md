@@ -109,7 +109,7 @@ $$ v_{ndc} = \frac{v_{clip}}{w} $$
 ### 1 安装依赖
 
 ```bash
-pip install taichi
+pip install -r requirements.txt
 ```
 
 ### 2 运行程序
