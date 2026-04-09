@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*- 
 
 import taichi as ti
 import math
@@ -35,7 +35,7 @@ for i in range(8):
 # 立方体（绕Y轴）
 @ti.func
 def get_model_matrix_y(angle):
-    rad = angle * math.pi / 180.0
+    rad = -angle * math.pi / 180.0
     c = ti.cos(rad)
     s = ti.sin(rad)
 
@@ -43,6 +43,19 @@ def get_model_matrix_y(angle):
         [c, 0.0, s, 0.0],
         [0.0, 1.0, 0.0, 0.0],
         [-s, 0.0, c, 0.0],
+        [0.0, 0.0, 0.0, 1.0]
+    ])
+
+# 绕X轴旋转矩阵
+@ti.func
+def get_model_matrix_x(angle):
+    rad = angle * math.pi / 180.0
+    c = ti.cos(rad)
+    s = ti.sin(rad)
+    return ti.Matrix([
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, c, -s, 0.0],
+        [0.0, s, c, 0.0],
         [0.0, 0.0, 0.0, 1.0]
     ])
 
@@ -151,10 +164,43 @@ cube_colors = [
     0x800080,0x008000,0x000080,0x808000
 ]
 
+# 插值模式专用屏幕坐标
+cube_slerp_screen = ti.Vector.field(2, dtype=ti.f32, shape=8)
+
+# 定义正方体的两个【不同倾斜空间朝向】
+# 朝向A：Y轴30° + X轴20°（向右斜+抬头）
+poseA_y = 30.0
+poseA_x = 20.0
+# 朝向B：Y轴150° + X轴-20°（向左斜+低头）
+poseB_y = 150.0
+poseB_x = -20.0
+
+interp_t = 0.0
+interp_speed = 0.008
+
+# 独立插值计算Kernel：仅旋转角度插值，正方体顶点不变
+@ti.kernel
+def compute_cube_rot_interp(t: ti.f32):
+    view = get_view_matrix()
+    proj = get_projection_matrix()
+    
+    # 角度线性插值：两个倾斜朝向平滑过渡
+    cur_y = poseA_y * (1-t) + poseB_y * t
+    cur_x = poseA_x * (1-t) + poseB_x * t
+    
+    # 组合旋转矩阵：X+Y轴，实现倾斜朝向
+    model = get_model_matrix_y(cur_y) @ get_model_matrix_x(cur_x)
+    mvp = proj @ view @ model
+
+    for i in range(8):
+        v4 = ti.Vector([cube_vertices[i][0], cube_vertices[i][1], cube_vertices[i][2], 1.0])
+        v_clip = mvp @ v4
+        v_ndc = v_clip / v_clip[3]
+        cube_slerp_screen[i] = [(v_ndc[0]+1)/2, (v_ndc[1]+1)/2]
 
 # 主循环
 angle = 0.0
-mode = "cube"
+mode = "Cube"
 
 while gui.running:
     if gui.get_event(ti.GUI.PRESS):
@@ -163,26 +209,51 @@ while gui.running:
         elif gui.event.key == 'd':
             angle -= 10.0
         elif gui.event.key == 't':
-            mode = "triangle"
+            mode = "Triangle"
+            angle = 0.0
         elif gui.event.key == 'c':
-            mode = "cube"
+            mode = "Cube"
+            angle = 0.0
+        elif gui.event.key == 'i':
+            mode = "Cube Interp"
+            angle = 0.0
         elif gui.event.key == ti.GUI.ESCAPE:
             break
 
     compute(angle)
 
+    # 插值模式
+    if mode == "Cube Interp":
+        interp_t += interp_speed
+        if interp_t > 1.0:
+            interp_t = 0.0
+        compute_cube_rot_interp(interp_t)
+
     gui.clear(0x000000)
 
-    # 三角形
-    if mode == "triangle":
+    # 原有三角形模式
+    if mode == "Triangle":
         gui.line(triangle_screen[0], triangle_screen[1], radius=2, color=0xFF0000)
         gui.line(triangle_screen[1], triangle_screen[2], radius=2, color=0x00FF00)
         gui.line(triangle_screen[2], triangle_screen[0], radius=2, color=0x0000FF)
 
-    # 立方体
-    else:
+    # 原有立方体模式
+    elif mode == "Cube":
         for i, e in enumerate(cube_edges):
             gui.line(cube_screen[e[0]], cube_screen[e[1]], radius=2, color=cube_colors[i])
 
+    # 标准正方体，不同倾斜朝向旋转插值
+    elif mode == "Cube Interp":
+        for i, e in enumerate(cube_edges):
+            gui.line(cube_slerp_screen[e[0]], cube_slerp_screen[e[1]], radius=2, color=0x00FFFF)
+
     gui.text(f"Mode: {mode}", pos=(0.02, 0.95), color=0xFFFFFF)
+    gui.text("Key Guide:", pos=(0.02, 0.90), color=0xFFFFAA)
+    gui.text("T: Triangle    C: Cube", pos=(0.02, 0.85), color=0xFFFFFF)
+    gui.text("I: Cube Interp", pos=(0.02, 0.80), color=0xFFFFFF)
+    if mode == "Cube" or mode == "Triangle":
+        gui.text("A/D: Rotate", pos=(0.02, 0.75), color=0xFFFFFF)
+        gui.text("ESC: Quit", pos=(0.02, 0.70), color=0xFFFFFF)
+    else:
+        gui.text("ESC: Quit", pos=(0.02, 0.75), color=0xFFFFFF)
     gui.show()
